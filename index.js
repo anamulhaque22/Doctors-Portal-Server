@@ -12,8 +12,9 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 function verifyJWT(req, res, next) {
     const authorization = req.headers.authorization;
+    console.log(authorization)
     if (!authorization) {
-        return res.status(401).send({ message: "UnAuthorized Access" });
+        return res.status(401).send({ message: "UnAuthorized Access in VerifyJWT" });
     }
     const token = authorization.split(' ')[1];
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
@@ -44,9 +45,7 @@ async function run() {
         //put user
         app.put('/user/:email', async (req, res) => {
             const email = req.params.email;
-            console.log(email)
             const user = req.body;
-            console.log(user)
             const filter = { email: email };
             const options = { upsert: true };
             const updateDoc = {
@@ -112,9 +111,35 @@ async function run() {
 
 
         //get all user
-        app.get('/user', async (req, res) => {
+        app.get('/user', verifyJWT, async (req, res) => {
             const users = await userCollection.find({}).toArray();
             res.send(users);
+        })
+
+        //make user admin   
+        app.put('/user/admin/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const requester = req.decoded.email;
+            const requesterInfo = await userCollection.findOne({ email: requester });
+            if (requesterInfo === 'admin') {
+                const filter = { email: email };
+                const updateDoc = {
+                    $set: { role: 'admin' }
+                };
+                const result = await userCollection.updateOne(filter, updateDoc);
+                return res.send(result);
+            }
+            return res.status(403).send({ message: "Forbidden Access" });
+
+        })
+
+
+        // get the user is admin or not
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const emailAccount = await userCollection.findOne({ email: email });
+            const isAdmin = emailAccount.role === 'admin';
+            res.send({ admin: isAdmin });
         })
 
 
