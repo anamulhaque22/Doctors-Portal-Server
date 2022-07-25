@@ -33,16 +33,29 @@ async function run() {
         const serviceCollection = client.db("doctors_portal").collection("services");
         const bookingCollection = client.db("doctors_portal").collection("bookings");
         const userCollection = client.db("doctors_portal").collection("users");
-        app.get('/service', async (req, res) => {
-            const query = {};
-            const cursor = serviceCollection.find(query);
-            const services = await cursor.toArray();
-            res.send(services);
+        const doctorCollection = client.db("doctors_portal").collection("doctors");
+
+
+
+        app.post('/doctor', verifyJWT, async (req, res) => {
+            const doctor = req.body;
+            const decodedEmail = req.decoded.email;
+            const user = await userCollection.findOne({ email: decodedEmail });
+            if (user.role === "admin") {
+                const result = await doctorCollection.insertOne(doctor);
+                return res.send(result);
+            }
+            return res.status(401).send({ message: "Unauthorized Access" });
         })
 
-        app.get('/test', async (req, res) => {
-            res.send("Test, Hello World");
-        })
+
+
+        app.get('/service', async (req, res) => {
+            const query = {};
+            const cursor = serviceCollection.find(query).project({ name: 1 });
+            const services = await cursor.toArray();
+            res.send(services);
+        });
 
         //put user
         app.put('/user/:email', async (req, res) => {
@@ -68,7 +81,7 @@ async function run() {
             app.delete('/booking/:id') // delete existing specific booking data
         */
         app.get('/available', async (req, res) => {
-            const date = req.query.date || 'Jul 22, 2022';
+            const date = req.query.date;
 
             //get all services
             const services = await serviceCollection.find({}).toArray();
