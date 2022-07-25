@@ -40,7 +40,9 @@ async function run() {
             res.send(services);
         })
 
-
+        app.get('/test', async (req, res) => {
+            res.send("Test, Hello World");
+        })
 
         //put user
         app.put('/user/:email', async (req, res) => {
