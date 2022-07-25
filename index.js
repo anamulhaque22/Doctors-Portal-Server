@@ -123,7 +123,7 @@ async function run() {
             const email = req.params.email;
             const requester = req.decoded.email;
             const requesterInfo = await userCollection.findOne({ email: requester });
-            if (requesterInfo === 'admin') {
+            if (requesterInfo.role === 'admin') {
                 const filter = { email: email };
                 const updateDoc = {
                     $set: { role: 'admin' }
