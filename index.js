@@ -36,16 +36,20 @@ async function run() {
         const doctorCollection = client.db("doctors_portal").collection("doctors");
 
 
-
-        app.post('/doctor', verifyJWT, async (req, res) => {
-            const doctor = req.body;
+        const verifyAdmin = async (req, res, next) => {
             const decodedEmail = req.decoded.email;
             const user = await userCollection.findOne({ email: decodedEmail });
             if (user.role === "admin") {
-                const result = await doctorCollection.insertOne(doctor);
-                return res.send(result);
+                next();
+            } else {
+                return res.status(401).send({ message: "Unauthorized Access" });
             }
-            return res.status(401).send({ message: "Unauthorized Access" });
+        }
+
+        app.post('/doctor', verifyJWT, verifyAdmin, async (req, res) => {
+            const doctor = req.body;
+            const result = await doctorCollection.insertOne(doctor);
+            res.send(result);
         })
 
 
@@ -134,17 +138,12 @@ async function run() {
         //make user admin   
         app.put('/user/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
-            const requester = req.decoded.email;
-            const requesterInfo = await userCollection.findOne({ email: requester });
-            if (requesterInfo.role === 'admin') {
-                const filter = { email: email };
-                const updateDoc = {
-                    $set: { role: 'admin' }
-                };
-                const result = await userCollection.updateOne(filter, updateDoc);
-                return res.send(result);
-            }
-            return res.status(403).send({ message: "Forbidden Access" });
+            const filter = { email: email };
+            const updateDoc = {
+                $set: { role: 'admin' }
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            return res.send(result);
 
         })
 
